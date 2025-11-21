@@ -1,5 +1,6 @@
 // lib/models/appointment.dart
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:clinichealth/models/enums.dart';
 
 /// Modelo de cita médica
@@ -15,21 +16,27 @@ class Appointment {
     required this.patientId,
     required this.dateTime,
     required this.motivo,
-    this.status = ApptStatus.scheduled,
+    required this.status,
   });
 
-  String get dayKey =>
-      '${dateTime.year}-${dateTime.month.toString().padLeft(2, '0')}-${dateTime.day.toString().padLeft(2, '0')}';
-
-  // ---------- Firestore helpers ----------
-
   factory Appointment.fromMap(String id, Map<String, dynamic> data) {
+    final rawDate = data['dateTime'];
+    late final DateTime dt;
+
+    if (rawDate is Timestamp) {
+      dt = rawDate.toDate();
+    } else if (rawDate is DateTime) {
+      dt = rawDate;
+    } else if (rawDate is String) {
+      dt = DateTime.tryParse(rawDate) ?? DateTime.now();
+    } else {
+      dt = DateTime.now();
+    }
+
     return Appointment(
       id: id,
       patientId: data['patientId'] ?? '',
-      dateTime: (data['dateTime'] as DateTime?) ??
-          DateTime.tryParse(data['dateTime'] ?? '') ??
-          DateTime(2000, 1, 1),
+      dateTime: dt,
       motivo: data['motivo'] ?? '',
       status: _parseStatus(data['status']),
     );
@@ -38,7 +45,8 @@ class Appointment {
   Map<String, dynamic> toMap() {
     return {
       'patientId': patientId,
-      'dateTime': dateTime,
+      // Guardamos como Timestamp para que sea consistente
+      'dateTime': Timestamp.fromDate(dateTime),
       'motivo': motivo,
       'status': status.name,
     };

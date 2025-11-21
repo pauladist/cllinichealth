@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../../../controllers/patients_controller.dart';
 import '../../../models/patient.dart';
 import '../../widgets/clinic_shell.dart';
+import '../../../models/enums.dart';
 
 class SelectPatientPage extends StatefulWidget {
   const SelectPatientPage({super.key});
@@ -36,13 +37,66 @@ class _SelectPatientPageState extends State<SelectPatientPage> {
     super.dispose();
   }
 
+  Future<void> _createPatient() async {
+    // Vamos al formulario y esperamos a ver si devuelve un id
+    final result = await Navigator.pushNamed(context, '/appt/new-patient');
+
+    if (!mounted) return;
+
+    if (result is String && result.isNotEmpty) {
+      // Opcional: mostrar mensaje
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Paciente creado, seleccioná fecha')),
+      );
+
+      // Continuamos el flujo de turno con ese paciente
+      Navigator.pushNamed(
+        context,
+        '/appt/select-date',
+        arguments: result,
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+
     return ClinicShell(
       current: BottomTab.module,
-      appBar: AppBar(title: const Text("Seleccionar paciente")),
+      appBar: AppBar(
+        title: const Text("Seleccionar paciente"),
+        actions: [
+          IconButton(
+            onPressed: _createPatient,
+            icon: const Icon(Icons.person_add_alt_1),
+            tooltip: 'Nuevo paciente',
+          ),
+        ],
+      ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
+          : _patients.isEmpty
+          ? Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.people_outline,
+              size: 56,
+              color: cs.onSurfaceVariant,
+            ),
+            const SizedBox(height: 12),
+            const Text('Todavía no hay pacientes'),
+            const SizedBox(height: 8),
+            FilledButton.icon(
+              onPressed: _createPatient,
+              icon: const Icon(Icons.person_add_alt_1),
+              label: const Text('Crear primer paciente'),
+            ),
+          ],
+        ),
+      )
           : ListView.separated(
         padding: const EdgeInsets.all(16),
         itemCount: _patients.length,

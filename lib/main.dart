@@ -1,3 +1,4 @@
+import 'package:clinichealth/views/screens/appointment_new/new_patient_page.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -117,6 +118,7 @@ class ClinicHealthApp extends StatelessWidget {
       routes: {
         '/citas': (_) => const CitasPage(),
         '/appt/select-patient': (_) => const SelectPatientPage(),
+        '/appt/new-patient':(_) => const NewPatientPage(),
         '/appt/select-date': (_) => const SelectDatePage(),
         '/appt/select-slot': (_) => const SelectSlotPage(),
         '/appt/review': (_) => const ReviewConfirmPage(),

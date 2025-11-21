@@ -1,4 +1,7 @@
 // lib/models/patient.dart
+
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class Patient {
   /// Usamos el DNI como id principal del paciente
   final String id; // = dni
@@ -7,7 +10,7 @@ class Patient {
   final String telefono;
   final String domicilio;
   final DateTime fechaNacimiento;
-  final String genero; // ej: "Femenino", "Masculino", "Otro"
+  final String genero;
   final String email;
 
   Patient({
@@ -23,19 +26,32 @@ class Patient {
 
   String get fullName => '$nombre $apellido';
 
-  // ---------- Helpers para Firestore ----------
-
+  /// id = id del documento (en tu caso, el DNI)
   factory Patient.fromMap(String id, Map<String, dynamic> data) {
+    final rawFecha = data['fechaNacimiento'];
+    late final DateTime fecha;
+
+    if (rawFecha is Timestamp) {
+      // Caso típico cuando se guardó como Timestamp
+      fecha = rawFecha.toDate();
+    } else if (rawFecha is DateTime) {
+      // Por si en algún momento ya viene como DateTime
+      fecha = rawFecha;
+    } else if (rawFecha is String) {
+      // Por si quedó algún registro viejo guardado como texto
+      fecha = DateTime.tryParse(rawFecha) ?? DateTime(2000, 1, 1);
+    } else {
+      // Fallback súper defensivo para no romper el stream
+      fecha = DateTime(2000, 1, 1);
+    }
+
     return Patient(
       id: id,
       nombre: data['nombre'] ?? '',
       apellido: data['apellido'] ?? '',
       telefono: data['telefono'] ?? '',
       domicilio: data['domicilio'] ?? '',
-      fechaNacimiento:
-      (data['fechaNacimiento'] as DateTime?) ??
-          DateTime.tryParse(data['fechaNacimiento'] ?? '') ??
-          DateTime(2000, 1, 1),
+      fechaNacimiento: fecha,
       genero: data['genero'] ?? '',
       email: data['email'] ?? '',
     );
@@ -47,7 +63,8 @@ class Patient {
       'apellido': apellido,
       'telefono': telefono,
       'domicilio': domicilio,
-      'fechaNacimiento': fechaNacimiento,
+      // Siempre guardamos como Timestamp para que sea consistente
+      'fechaNacimiento': Timestamp.fromDate(fechaNacimiento),
       'genero': genero,
       'email': email,
     };
