@@ -1,6 +1,14 @@
+// lib/views/screens/citas_page.dart
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import '../widgets/clinic_shell.dart';
-import '../data/fake_store.dart';
+
+import '../../controllers/appointments_controller.dart';
+import '../../controllers/patients_controller.dart';
+import '../../models/appointment.dart';
+import '../../models/patient.dart';
+import '../../models/enums.dart';
 
 class CitasPage extends StatefulWidget {
   const CitasPage({super.key});
@@ -10,21 +18,52 @@ class CitasPage extends StatefulWidget {
 }
 
 class _CitasPageState extends State<CitasPage> {
-  final store = FakeStore.I;
+  final _apptsCtrl = AppointmentsController();
+  final _patientsCtrl = PatientsController();
+
+  StreamSubscription<List<Appointment>>? _apptsSub;
+  StreamSubscription<List<Patient>>? _patientsSub;
+
+  List<Appointment> _appointments = [];
+  Map<String, Patient> _patientsById = {};
+
+  bool _loading = true;
 
   @override
   void initState() {
     super.initState();
-    store.addListener(_onChanged);
+
+    _apptsSub = _apptsCtrl.watchAll().listen((appts) {
+      setState(() {
+        _appointments = appts;
+        _loading = false;
+      });
+    });
+
+    _patientsSub = _patientsCtrl.watchAll().listen((patients) {
+      setState(() {
+        _patientsById = {
+          for (final p in patients) p.id: p,
+        };
+      });
+    });
   }
 
   @override
   void dispose() {
-    store.removeListener(_onChanged);
+    _apptsSub?.cancel();
+    _patientsSub?.cancel();
     super.dispose();
   }
 
-  void _onChanged() => setState(() {});
+  List<Appointment> get _upcoming {
+    final now = DateTime.now();
+    final filtered = _appointments
+        .where((a) => a.dateTime.isAfter(now.subtract(const Duration(hours: 1))))
+        .toList();
+    filtered.sort((a, b) => a.dateTime.compareTo(b.dateTime));
+    return filtered;
+  }
 
   void _newAppointment() {
     Navigator.pushNamed(context, '/appt/select-patient');
@@ -49,15 +88,18 @@ class _CitasPageState extends State<CitasPage> {
                 color: cs.primaryContainer.withOpacity(.4),
                 shape: BoxShape.circle,
               ),
-              child: Icon(Icons.warning_amber_rounded, color: cs.primary, size: 34),
+              child: Icon(Icons.warning_amber_rounded,
+                  color: cs.primary, size: 34),
             ),
             const SizedBox(height: 14),
-            const Text('Cancelar cita',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+            const Text(
+              'Cancelar cita',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+            ),
             const SizedBox(height: 8),
             Text(
               '¿Seguro que querés cancelar esta cita?\n\n'
-                  '${_ddmmyy(a.start)}  •  ${_hhmm(a.start)}–${_hhmm(a.end)}',
+                  '${_ddmmyy(a.dateTime)}  •  ${_hhmm(a.dateTime)}',
               textAlign: TextAlign.center,
               style: TextStyle(color: cs.onSurfaceVariant),
             ),
@@ -82,7 +124,15 @@ class _CitasPageState extends State<CitasPage> {
     );
 
     if (ok == true) {
-      store.setApptStatus(a.id, ApptStatus.cancelled);
+      final updated = Appointment(
+        id: a.id,
+        patientId: a.patientId,
+        dateTime: a.dateTime,
+        motivo: a.motivo,
+        status: ApptStatus.cancelled,
+      );
+      await _apptsCtrl.update(updated);
+
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Cita cancelada')),
@@ -92,15 +142,23 @@ class _CitasPageState extends State<CitasPage> {
 
   @override
   Widget build(BuildContext context) {
-    final list = store.upcoming();
+    final list = _upcoming;
+    final cs = Theme.of(context).colorScheme;
 
     return ClinicShell(
       current: BottomTab.module,
       appBar: AppBar(
         title: const Text('Citas'),
-        actions: [IconButton(onPressed: _newAppointment, icon: const Icon(Icons.add))],
+        actions: [
+          IconButton(
+            onPressed: _newAppointment,
+            icon: const Icon(Icons.add),
+          ),
+        ],
       ),
-      body: list.isEmpty
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : list.isEmpty
           ? const Center(child: Text('Sin citas próximas'))
           : ListView.separated(
         padding: const EdgeInsets.all(16),
@@ -108,20 +166,24 @@ class _CitasPageState extends State<CitasPage> {
         separatorBuilder: (_, __) => const SizedBox(height: 12),
         itemBuilder: (_, i) {
           final a = list[i];
-          final p = store.patientById(a.patientId)!;
+          final p = _patientsById[a.patientId];
           final status = _statusUI(a.status);
-          final cs = Theme.of(context).colorScheme;
 
-          // estilos compactos para que no desborde
           final compact = ButtonStyle(
             visualDensity: VisualDensity.compact,
             padding: const MaterialStatePropertyAll(
               EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             ),
             shape: MaterialStatePropertyAll(
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
           );
+
+          final name = p?.fullName ?? 'Paciente desconocido';
+
+          final endTime = a.dateTime.add(const Duration(minutes: 30));
 
           return Container(
             padding: const EdgeInsets.all(12),
@@ -141,60 +203,103 @@ class _CitasPageState extends State<CitasPage> {
               children: [
                 CircleAvatar(
                   backgroundColor: cs.primaryContainer,
-                  child: Text(p.nombre[0].toUpperCase()),
+                  child: Text(
+                    name.isNotEmpty
+                        ? name[0].toUpperCase()
+                        : '?',
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(p.fullName, style: const TextStyle(fontWeight: FontWeight.w700)),
+                      Text(
+                        name,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
                       const SizedBox(height: 2),
-                      Text('${_ddmmyy(a.start)}  •  ${_hhmm(a.start)}–${_hhmm(a.end)}'),
-                      Text(a.motivo, style: TextStyle(color: cs.onSurfaceVariant)),
+                      Text(
+                        '${_ddmmyy(a.dateTime)}  •  '
+                            '${_hhmm(a.dateTime)}–${_hhmm(endTime)}',
+                      ),
+                      Text(
+                        a.motivo,
+                        style: TextStyle(
+                          color: cs.onSurfaceVariant,
+                        ),
+                      ),
                       const SizedBox(height: 8),
-
-                      // Acciones
                       Wrap(
                         spacing: 8,
                         runSpacing: 8,
-                        crossAxisAlignment: WrapCrossAlignment.center,
+                        crossAxisAlignment:
+                        WrapCrossAlignment.center,
                         children: [
                           Chip(
                             label: Text(status.label),
-                            backgroundColor: status.color.withOpacity(.15),
-                            labelStyle: TextStyle(color: status.color),
+                            backgroundColor:
+                            status.color.withOpacity(.15),
+                            labelStyle: TextStyle(
+                              color: status.color,
+                            ),
                             visualDensity: VisualDensity.compact,
-                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                            ),
                           ),
-
-                          // Check-in (si no está cancelada)
                           TextButton.icon(
                             style: compact,
-                            onPressed: (a.status == ApptStatus.cancelled)
+                            onPressed:
+                            (a.status == ApptStatus.cancelled)
                                 ? null
-                                : () => store.setApptStatus(a.id, ApptStatus.checkin),
-                            icon: const Icon(Icons.how_to_reg, size: 18),
+                                : () async {
+                              final updated =
+                              Appointment(
+                                id: a.id,
+                                patientId: a.patientId,
+                                dateTime: a.dateTime,
+                                motivo: a.motivo,
+                                status:
+                                ApptStatus.checkin,
+                              );
+                              await _apptsCtrl
+                                  .update(updated);
+                            },
+                            icon: const Icon(
+                              Icons.how_to_reg,
+                              size: 18,
+                            ),
                             label: const Text('Check-in'),
                           ),
-
-                          // Nota clínica (solo si llegó)
                           OutlinedButton.icon(
                             style: compact,
-                            onPressed: (a.status == ApptStatus.checkin)
-                                ? () => Navigator.pushNamed(context, '/consulta/new', arguments: a.id)
+                            onPressed:
+                            (a.status == ApptStatus.checkin)
+                                ? () => Navigator.pushNamed(
+                              context,
+                              '/consulta/new',
+                              arguments: a.id,
+                            )
                                 : null,
-                            icon: const Icon(Icons.note_add_outlined, size: 18),
+                            icon: const Icon(
+                              Icons.note_add_outlined,
+                              size: 18,
+                            ),
                             label: const Text('Nota clínica'),
                           ),
-
-                          // Cancelar (pide confirmación)
                           TextButton.icon(
                             style: compact,
-                            onPressed: (a.status == ApptStatus.checkin)
-                                ? null // no cancelar si ya llegó
+                            onPressed:
+                            (a.status == ApptStatus.checkin)
+                                ? null
                                 : () => _confirmCancel(a),
-                            icon: const Icon(Icons.cancel, size: 18),
+                            icon: const Icon(
+                              Icons.cancel,
+                              size: 18,
+                            ),
                             label: const Text('Cancelar'),
                           ),
                         ],
@@ -223,6 +328,7 @@ class _CitasPageState extends State<CitasPage> {
 
   String _hhmm(DateTime d) =>
       '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
+
   String _ddmmyy(DateTime d) =>
       '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
 }

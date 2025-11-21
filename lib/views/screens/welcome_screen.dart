@@ -1,12 +1,38 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'login_screen.dart';
 
-class WelcomeScreen extends StatelessWidget {
+class WelcomeScreen extends StatefulWidget {
   const WelcomeScreen({super.key});
+
+  @override
+  State<WelcomeScreen> createState() => _WelcomeScreenState();
+}
+
+class _WelcomeScreenState extends State<WelcomeScreen> {
+
+  @override
+  void initState() {
+    super.initState();
+    _testFirestore();
+  }
+
+  Future<void> _testFirestore() async {
+    try {
+      await FirebaseFirestore.instance.collection('test').add({
+        'ok': true,
+        'createdAt': DateTime.now(),
+      });
+      debugPrint('✅ Firestore funcionando: documento creado');
+    } catch (e) {
+      debugPrint('❌ Error Firestore: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+
     return Scaffold(
       backgroundColor: cs.surface,
       body: SafeArea(
@@ -33,27 +59,49 @@ class WelcomeScreen extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: Colors.white,
                       shape: BoxShape.circle,
-                      boxShadow: [BoxShadow(color: Colors.black.withOpacity(.08), blurRadius: 24, offset: const Offset(0, 8))],
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(.08),
+                          blurRadius: 24,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
                     ),
-                    child: Image.asset('assets/images/icon.jpg', width: 72, height: 72, fit: BoxFit.contain),
+                    child: Image.asset(
+                      'assets/images/icon.jpg',
+                      width: 72,
+                      height: 72,
+                      fit: BoxFit.contain,
+                    ),
                   ),
                 ),
               ]),
             ),
             const SizedBox(height: 16),
-            Text('ClinicHealth', style: TextStyle(fontSize: 32, fontWeight: FontWeight.w700, color: cs.onSurface)),
+            Text('ClinicHealth',
+                style: TextStyle(
+                    fontSize: 32, fontWeight: FontWeight.w700, color: cs.onSurface)),
             const SizedBox(height: 8),
-            Text('Dr. John Zoindberg \nWoop woop woop!', textAlign: TextAlign.center, style: TextStyle(color: cs.onSurfaceVariant)),
+            Text(
+              'Dr. John Zoindberg \nWoop woop woop!',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: cs.onSurfaceVariant),
+            ),
             const SizedBox(height: 60),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: SizedBox(
                 width: double.infinity,
                 child: FilledButton(
-                  onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LoginScreen())),
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const LoginScreen()),
+                  ),
                   style: FilledButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
                   ),
                   child: const Text('Iniciar sesión'),
                 ),
