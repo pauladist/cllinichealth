@@ -16,6 +16,12 @@ import 'views/screens/appointment_new/select_date_page.dart';
 import 'views/screens/appointment_new/select_slot_page.dart';
 import 'views/screens/appointment_new/review_confirm_page.dart';
 import 'views/screens/consultas/new_consulta_page.dart';
+import 'views/screens/historial_page.dart';
+
+// Notificador global para el modo de tema (claro / oscuro)
+final ValueNotifier<ThemeMode> themeModeNotifier =
+ValueNotifier<ThemeMode>(ThemeMode.light);
+
 
 /// -------------------------
 /// FCM BACKGROUND HANDLER
@@ -93,37 +99,64 @@ class ClinicHealthApp extends StatelessWidget {
   Widget build(BuildContext context) {
     const seed = Color(0xFFE74C3C); // salmón/rojo
 
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'ClinicHealth',
-      theme: ThemeData(
-        useMaterial3: true,
-        colorSchemeSeed: seed,
-        brightness: Brightness.light,
-        fontFamily: 'Roboto',
-        inputDecorationTheme: const InputDecorationTheme(
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.all(Radius.circular(14)),
+    // Escucha el ValueNotifier y reconstruye el MaterialApp
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: themeModeNotifier,
+      builder: (context, mode, _) {
+        return MaterialApp(
+          debugShowCheckedModeBanner: false,
+          title: 'ClinicHealth',
+
+          // ---- NUEVO: modo de tema controlado por el switch ----
+          themeMode: mode,
+
+          // Tema claro (el que ya usabas)
+          theme: ThemeData(
+            useMaterial3: true,
+            colorSchemeSeed: seed,
+            brightness: Brightness.light,
+            fontFamily: 'Roboto',
+            inputDecorationTheme: const InputDecorationTheme(
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.all(Radius.circular(14)),
+              ),
+            ),
           ),
-        ),
-      ),
-      locale: const Locale('es'),
-      supportedLocales: const [Locale('es'), Locale('en')],
-      localizationsDelegates: const [
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      home: const WelcomeScreen(),
-      routes: {
-        '/citas': (_) => const CitasPage(),
-        '/appt/select-patient': (_) => const SelectPatientPage(),
-        '/appt/new-patient':(_) => const NewPatientPage(),
-        '/appt/select-date': (_) => const SelectDatePage(),
-        '/appt/select-slot': (_) => const SelectSlotPage(),
-        '/appt/review': (_) => const ReviewConfirmPage(),
-        '/consulta/new': (_) => const NewConsultaPage(),
+
+          // Tema oscuro (mismo seed pero en dark)
+          darkTheme: ThemeData(
+            useMaterial3: true,
+            colorSchemeSeed: seed,
+            brightness: Brightness.dark,
+            fontFamily: 'Roboto',
+            inputDecorationTheme: const InputDecorationTheme(
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.all(Radius.circular(14)),
+              ),
+            ),
+          ),
+
+          locale: const Locale('es'),
+          supportedLocales: const [Locale('es'), Locale('en')],
+          localizationsDelegates: const [
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          home: const WelcomeScreen(),
+          routes: {
+            '/citas': (_) => const CitasPage(),
+            '/appt/select-patient': (_) => const SelectPatientPage(),
+            '/appt/new-patient': (_) => const NewPatientPage(),
+            '/appt/select-date': (_) => const SelectDatePage(),
+            '/appt/select-slot': (_) => const SelectSlotPage(),
+            '/appt/review': (_) => const ReviewConfirmPage(),
+            '/consulta/new': (_) => const NewConsultaPage(),
+            '/historial': (_) => const HistorialPage(),
+          },
+        );
       },
     );
   }
 }
+

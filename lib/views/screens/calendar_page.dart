@@ -279,10 +279,6 @@ class _ApptTile extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
-          Icon(
-            Icons.chevron_right,
-            color: cs.onSurfaceVariant,
-          ),
         ],
       ),
     );

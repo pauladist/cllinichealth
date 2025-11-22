@@ -39,8 +39,13 @@ class _NewConsultaPageState extends State<NewConsultaPage> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final apptId = ModalRoute.of(context)!.settings.arguments as String;
+    final args = ModalRoute.of(context)!.settings.arguments as Map;
+
+    final String apptId = args['appointmentId'];
+// el patientId NO lo necesitás porque ya se carga desde la cita en _loadData()
+
     _loadData(apptId);
+
   }
 
   Future<void> _loadData(String apptId) async {

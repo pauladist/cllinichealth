@@ -1,128 +1,103 @@
-import 'dart:async';
+// lib/views/screens/notifications_page.dart
 import 'package:flutter/material.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import '../widgets/clinic_shell.dart';
 
-class NotificationsPage extends StatefulWidget {
+class NotificationsPage extends StatelessWidget {
   const NotificationsPage({super.key});
-
-  @override
-  State<NotificationsPage> createState() => _NotificationsPageState();
-}
-
-class _NotificationsPageState extends State<NotificationsPage> {
-  bool _permissionGranted = false;
-  String? _fcmToken;
-  bool _loading = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadStatus();
-  }
-
-  Future<void> _loadStatus() async {
-    final settings =
-    await FirebaseMessaging.instance.getNotificationSettings();
-
-    final token = await FirebaseMessaging.instance.getToken();
-
-    setState(() {
-      _permissionGranted =
-          settings.authorizationStatus == AuthorizationStatus.authorized;
-      _fcmToken = token;
-      _loading = false;
-    });
-  }
-
-  Future<void> _requestPermission() async {
-    final settings = await FirebaseMessaging.instance.requestPermission(
-      alert: true,
-      badge: true,
-      sound: true,
-    );
-
-    setState(() {
-      _permissionGranted =
-          settings.authorizationStatus == AuthorizationStatus.authorized;
-    });
-
-    // refrescamos token por las dudas
-    await _loadStatus();
-  }
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
 
+    final user = FirebaseAuth.instance.currentUser;
+    final doctorId = user?.uid ?? 'doctor'; // mismo que usás en la Function
+
+    final query = FirebaseFirestore.instance
+        .collection('notifications')
+        .where('doctorId', isEqualTo: doctorId)
+        .orderBy('createdAt', descending: true);
+
     return ClinicShell(
-      current: BottomTab.settings,
-      appBar: AppBar(title: const Text("Notificaciones")),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : Padding(
-        padding: const EdgeInsets.all(20),
-        child: ListView(
-          children: [
-            ListTile(
-              leading: Icon(
-                _permissionGranted
-                    ? Icons.notifications_active
-                    : Icons.notifications_off,
-                color: _permissionGranted ? cs.primary : cs.error,
-                size: 30,
-              ),
-              title: Text(
-                _permissionGranted
-                    ? 'Notificaciones activadas'
-                    : 'Notificaciones desactivadas',
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-              subtitle: const Text(
-                'La app puede recibir recordatorios de turnos.',
-              ),
-              trailing: !_permissionGranted
-                  ? TextButton(
-                onPressed: _requestPermission,
-                child: const Text('Permitir'),
-              )
-                  : null,
-            ),
-
-            const SizedBox(height: 24),
-            const Divider(),
-            const SizedBox(height: 16),
-
-            const Text(
-              'Token FCM del dispositivo',
-              style: TextStyle(fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: cs.primaryContainer.withOpacity(.15),
-                borderRadius: BorderRadius.circular(12),
-              ),
+      current: BottomTab.notifications,
+      appBar: AppBar(
+        title: const Text('Notificaciones'),
+        centerTitle: true,
+      ),
+      body: StreamBuilder<QuerySnapshot>(
+        stream: query.snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return Center(
               child: Text(
-                _fcmToken ?? '(no se pudo obtener el token)',
-                style: TextStyle(color: cs.onSurface, fontSize: 13),
+                'Error al cargar las notificaciones',
+                style: TextStyle(color: cs.error),
               ),
-            ),
+            );
+          }
 
-            const SizedBox(height: 24),
-            const Divider(),
-            const SizedBox(height: 16),
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-            Text(
-              'Esta pantalla es solo informativa.\n\n'
-                  'Los recordatorios de turnos se envían automáticamente '
-                  'desde Firebase Functions 10 minutos antes del turno.',
-              style: TextStyle(color: cs.onSurfaceVariant),
-            ),
-          ],
-        ),
+          final docs = snapshot.data?.docs ?? [];
+          if (docs.isEmpty) {
+            return Center(
+              child: Text(
+                'No hay notificaciones recientes.\n\n'
+                    'Cuando haya recordatorios de turnos, aparecerán acá.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: cs.onSurfaceVariant),
+              ),
+            );
+          }
+
+          return ListView.separated(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+            itemCount: docs.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 8),
+            itemBuilder: (context, index) {
+              final doc = docs[index];
+              final data = doc.data() as Map<String, dynamic>;
+
+              final title = data['title'] as String? ?? 'Notificación';
+              final body = data['body'] as String? ?? '';
+              final read = data['read'] as bool? ?? false;
+              final ts = data['createdAt'] as Timestamp?;
+              final createdAt = ts?.toDate();
+
+              String subtitle = body;
+              if (createdAt != null) {
+                final hh = createdAt.hour.toString().padLeft(2, '0');
+                final mm = createdAt.minute.toString().padLeft(2, '0');
+                subtitle += '\n$hh:$mm';
+              }
+
+              return Card(
+                child: ListTile(
+                  leading: Icon(
+                    read ? Icons.notifications_none : Icons.notifications,
+                    color: read ? cs.outline : cs.primary,
+                  ),
+                  title: Text(title),
+                  subtitle: Text(
+                    subtitle,
+                    style: TextStyle(
+                      color: cs.onSurfaceVariant,
+                    ),
+                  ),
+                  isThreeLine: true,
+                  onTap: () {
+                    // marcar como leída
+                    doc.reference.update({'read': true});
+                  },
+                ),
+              );
+            },
+          );
+        },
       ),
     );
   }

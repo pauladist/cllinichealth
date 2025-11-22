@@ -28,6 +28,24 @@ class _HistorialPageState extends State<HistorialPage> {
   /// ids de pacientes abiertos (carpetas expandidas)
   final Set<String> _openIds = {};
 
+  /// id inicial para abrir ficha al venir desde el buscador
+  String? _initialPatientId;
+  bool _argsHandled = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_argsHandled) return;
+    _argsHandled = true;
+
+    final args = ModalRoute.of(context)?.settings.arguments;
+    if (args is String) {
+      _initialPatientId = args;
+      _openIds.add(args); // marcamos esa carpeta como abierta
+    }
+  }
+
+
   @override
   void initState() {
     super.initState();

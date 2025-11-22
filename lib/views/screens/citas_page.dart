@@ -281,7 +281,10 @@ class _CitasPageState extends State<CitasPage> {
                                 ? () => Navigator.pushNamed(
                               context,
                               '/consulta/new',
-                              arguments: a.id,
+                              arguments: {
+                                'appointmentId': a.id,      // id de la cita
+                                'patientId': a.patientId,   //  DNI / id del paciente
+                              },
                             )
                                 : null,
                             icon: const Icon(

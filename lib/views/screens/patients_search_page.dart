@@ -141,12 +141,11 @@ class _PatientsSearchPageState extends State<PatientsSearchPage> {
                   ),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Abrir ficha: $name'),
-                      ),
+                    Navigator.pushNamed(
+                      context,
+                      '/historial',
+                      arguments: p.id, // DNI / id del paciente
                     );
-                    // acá después podés navegar al detalle del paciente
                   },
                 );
               },
