@@ -11,11 +11,15 @@ import '../../models/patient.dart';
 import '../../models/consultation.dart';
 
 class HistorialPage extends StatefulWidget {
-  const HistorialPage({super.key});
+  /// Si viene desde la ficha de un paciente, abrimos directamente esa carpeta.
+  final String? patientIdToOpen;
+
+  const HistorialPage({super.key, this.patientIdToOpen});
 
   @override
   State<HistorialPage> createState() => _HistorialPageState();
 }
+
 
 class _HistorialPageState extends State<HistorialPage> {
   final _patientsCtrl = PatientsController();

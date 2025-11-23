@@ -79,19 +79,20 @@ class PatientDetailPage extends StatelessWidget {
 
             const SizedBox(height: 24),
 
-            // IR A HISTORIAL
             FilledButton.icon(
               onPressed: () {
                 Navigator.of(context).push(
                   MaterialPageRoute(
-                    builder: (_) => const HistorialPage(),
-                    settings: RouteSettings(arguments: patient.id),
+                    builder: (_) => HistorialPage(
+                      patientIdToOpen: patient.id, // 🔹 abrí directamente esa carpeta
+                    ),
                   ),
                 );
               },
               icon: const Icon(Icons.folder_open),
               label: const Text('Ir al historial clínico'),
             ),
+
 
             const SizedBox(height: 24),
 
