@@ -26,7 +26,6 @@ class _HistorialPageState extends State<HistorialPage> {
   List<Patient> _patients = [];
   bool _loading = true;
 
-  /// ids de pacientes abiertos (carpetas expandidas)
   final Set<String> _openIds = {};
 
   @override
@@ -42,6 +41,13 @@ class _HistorialPageState extends State<HistorialPage> {
         setState(() {
           _patients = patients;
           _loading = false;
+
+          if (widget.patientIdToOpen != null &&
+              _patients.any((p) => p.id == widget.patientIdToOpen)) {
+            _openIds
+              ..clear()
+              ..add(widget.patientIdToOpen!);
+          }
         });
       },
       onError: (e) {

@@ -1,6 +1,8 @@
 // lib/views/screens/patients_search_page.dart
 import 'dart:async';
 
+import 'package:clinichealth/views/screens/historial_page.dart';
+import 'package:clinichealth/views/screens/patient_detail_page.dart';
 import 'package:flutter/material.dart';
 import '../widgets/clinic_shell.dart';
 
@@ -141,10 +143,10 @@ class _PatientsSearchPageState extends State<PatientsSearchPage> {
                   ),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () {
-                    Navigator.pushNamed(
-                      context,
-                      '/historial',
-                      arguments: p.id, // DNI / id del paciente
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => PatientDetailPage(patient: p),
+                      ),
                     );
                   },
                 );

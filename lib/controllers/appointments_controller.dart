@@ -63,4 +63,20 @@ class AppointmentsController {
           .toList();
     });
   }
+  Stream<List<Appointment>> watchByPatient(String patientId) {
+    return _col
+        .where('patientId', isEqualTo: patientId)
+        .snapshots()
+        .map(
+          (snapshot) => snapshot.docs
+          .map(
+            (doc) => Appointment.fromMap(
+          doc.id,
+          doc.data() as Map<String, dynamic>,
+        ),
+      )
+          .toList(),
+    );
+  }
+
 }
