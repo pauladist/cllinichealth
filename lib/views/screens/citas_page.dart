@@ -250,6 +250,7 @@ class _CitasPageState extends State<CitasPage> {
                               horizontal: 8,
                             ),
                           ),
+                          // Nota clínica: solo habilitada cuando la cita está en Check-in
                           OutlinedButton.icon(
                             style: compact,
                             onPressed: (a.status == ApptStatus.checkin)
@@ -257,8 +258,8 @@ class _CitasPageState extends State<CitasPage> {
                               context,
                               '/consulta/new',
                               arguments: {
-                                'appointmentId': a.id,   // id de la cita
-                                'patientId': a.patientId, // id/dni del paciente
+                                'appointmentId': a.id,    // id de la cita
+                                'patientId': a.patientId, // id/DNI del paciente
                               },
                             )
                                 : null,
@@ -270,7 +271,8 @@ class _CitasPageState extends State<CitasPage> {
                           ),
                           TextButton.icon(
                             style: compact,
-                            onPressed: (a.status == ApptStatus.checkin)
+                            onPressed: (a.status == ApptStatus.checkin ||
+                                a.status == ApptStatus.cancelled)
                                 ? null
                                 : () => _confirmCancel(a),
                             icon: const Icon(

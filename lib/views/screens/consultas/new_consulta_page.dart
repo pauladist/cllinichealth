@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 
-
-import '../../../models/enums.dart';
 import '../../widgets/clinic_shell.dart';
 
 // MODELOS
@@ -41,11 +39,12 @@ class _NewConsultaPageState extends State<NewConsultaPage> {
     super.didChangeDependencies();
     final args = ModalRoute.of(context)!.settings.arguments as Map;
 
-    final String apptId = args['appointmentId'];
-// el patientId NO lo necesitás porque ya se carga desde la cita en _loadData()
+    // id de la cita que viene desde CitasPage
+    final String apptId = args['appointmentId'] as String;
 
+    // El patientId NO lo necesitamos en los argumentos porque
+    // lo cargamos desde la cita en _loadData()
     _loadData(apptId);
-
   }
 
   Future<void> _loadData(String apptId) async {
@@ -76,6 +75,10 @@ class _NewConsultaPageState extends State<NewConsultaPage> {
         _patient = patient;
         _loading = false;
       });
+
+      debugPrint(
+        'Nueva consulta: apptId=${_appt.id}, patientId=${_patient.id}',
+      );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -91,21 +94,29 @@ class _NewConsultaPageState extends State<NewConsultaPage> {
     setState(() => _saving = true);
 
     try {
+      final resumen = _resumen.text.trim().isEmpty
+          ? 'Consulta realizada'
+          : _resumen.text.trim();
+
       final consulta = Consultation(
         id: '', // Firestore genera el id
         appointmentId: _appt.id,
-        patientId: _patient.id,
-        resumen: _resumen.text.trim().isEmpty
-            ? 'Consulta realizada'
-            : _resumen.text.trim(),
+        patientId: _patient.id, // DNI del paciente
+        resumen: resumen,
         indicaciones: _indic.text.trim(),
         fecha: DateTime.now(),
       );
 
-      // 1) Guardar consulta en el historial del paciente
+      debugPrint(
+        'Guardando consulta en historial: patientId=${_patient.id}, '
+            'appointmentId=${_appt.id}',
+      );
+
+      // 1) Guardar consulta en el historial del paciente:
+      //    patients/{DNI}/consultations/{autoId}
       await _consultationsCtrl.add(_patient.id, consulta);
 
-      // 2) Opcional: marcar cita como "completada / en consultorio"
+      // 2) Opcional: actualizar la cita (en este caso la dejamos en checkin)
       final updatedAppt = Appointment(
         id: _appt.id,
         patientId: _appt.patientId,
@@ -118,12 +129,13 @@ class _NewConsultaPageState extends State<NewConsultaPage> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Consulta guardada y cita completada'),
+          content: Text('Consulta guardada en historial'),
         ),
       );
       Navigator.pop(context);
     } catch (e) {
       if (!mounted) return;
+      debugPrint('Error al guardar consulta: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error al guardar: $e')),
       );

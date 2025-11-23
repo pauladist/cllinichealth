@@ -22,8 +22,18 @@ class ConsultationsController {
         .map((snapshot) {
       return snapshot.docs
           .map((doc) => Consultation.fromMap(
-          doc.id, doc.data() as Map<String, dynamic>))
+        doc.id,
+        doc.data() as Map<String, dynamic>,
+      ))
           .toList();
     });
+  }
+
+  Future<void> update(String patientId, Consultation c) async {
+    await _col(patientId).doc(c.id).update(c.toMap());
+  }
+
+  Future<void> delete(String patientId, String consultaId) async {
+    await _col(patientId).doc(consultaId).delete();
   }
 }

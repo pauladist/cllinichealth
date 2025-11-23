@@ -32,12 +32,6 @@ class ClinicShell extends StatelessWidget {
   });
 
   void _goTo(BuildContext context, BottomTab target) {
-    // Si ya estamos en ese tab (o en un módulo que cuelga de Home), no hacemos nada
-    if (current == target ||
-        (current == BottomTab.module && target == BottomTab.home)) {
-      return;
-    }
-
     Widget screen;
 
     switch (target) {
@@ -94,57 +88,64 @@ class ClinicShell extends StatelessWidget {
             ],
           ),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              // Settings
-              _BottomItem(
-                icon: Icons.settings_outlined,
-                label: 'Ajustes',
-                selected: effective == BottomTab.settings,
-                activeColor: activeColor,
-                inactiveColor: inactiveColor,
-                onTap: () => _goTo(context, BottomTab.settings),
+              // Ajustes
+              Expanded(
+                child: _BottomItem(
+                  icon: Icons.settings_outlined,
+                  label: 'Ajustes',
+                  selected: effective == BottomTab.settings,
+                  activeColor: activeColor,
+                  inactiveColor: inactiveColor,
+                  onTap: () => _goTo(context, BottomTab.settings),
+                ),
               ),
-              // Search / Pacientes
-              _BottomItem(
-                icon: Icons.search,
-                label: 'Pacientes',
-                selected: effective == BottomTab.search,
-                activeColor: activeColor,
-                inactiveColor: inactiveColor,
-                onTap: () => _goTo(context, BottomTab.search),
+              // Pacientes
+              Expanded(
+                child: _BottomItem(
+                  icon: Icons.search,
+                  label: 'Pacientes',
+                  selected: effective == BottomTab.search,
+                  activeColor: activeColor,
+                  inactiveColor: inactiveColor,
+                  onTap: () => _goTo(context, BottomTab.search),
+                ),
               ),
-              // Home
-              _BottomItem(
-                icon: Icons.home_filled,
-                label: 'Inicio',
-                selected: effective == BottomTab.home,
-                activeColor: activeColor,
-                inactiveColor: inactiveColor,
-                onTap: () => _goTo(context, BottomTab.home),
+              // Inicio
+              Expanded(
+                child: _BottomItem(
+                  icon: Icons.home_filled,
+                  label: 'Inicio',
+                  selected: effective == BottomTab.home,
+                  activeColor: activeColor,
+                  inactiveColor: inactiveColor,
+                  onTap: () => _goTo(context, BottomTab.home),
+                ),
               ),
-              // Notificaciones
-              _BottomItem(
-                icon: Icons.notifications_none_rounded,
-                label: 'Alertas',
-                selected: effective == BottomTab.notifications,
-                activeColor: activeColor,
-                inactiveColor: inactiveColor,
-                onTap: () => _goTo(context, BottomTab.notifications),
+              // Alertas
+              Expanded(
+                child: _BottomItem(
+                  icon: Icons.notifications_none_rounded,
+                  label: 'Alertas',
+                  selected: effective == BottomTab.notifications,
+                  activeColor: activeColor,
+                  inactiveColor: inactiveColor,
+                  onTap: () => _goTo(context, BottomTab.notifications),
+                ),
               ),
               // Perfil (avatar)
-              GestureDetector(
-                onTap: () => _goTo(context, BottomTab.profile),
-                child: CircleAvatar(
-                  radius: 18,
-                  backgroundColor:
-                  effective == BottomTab.profile
-                      ? activeColor.withOpacity(.15)
-                      : cs.surface,
-                  child: const CircleAvatar(
-                    radius: 16,
-                    backgroundImage:
-                    AssetImage('assets/images/icon.jpg'),
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => _goTo(context, BottomTab.profile),
+                  child: CircleAvatar(
+                    radius: 18,
+                    backgroundColor: effective == BottomTab.profile
+                        ? activeColor.withOpacity(.15)
+                        : cs.surface,
+                    child: const CircleAvatar(
+                      radius: 16,
+                      backgroundImage: AssetImage('assets/images/icon.jpg'),
+                    ),
                   ),
                 ),
               ),
