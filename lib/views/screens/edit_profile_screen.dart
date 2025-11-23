@@ -50,12 +50,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         return;
       }
 
-      final newEmail = _emailCtrl.text.trim();
       final newPass = _passCtrl.text.trim();
-
-      if (newEmail.isNotEmpty && newEmail != user.email) {
-        await user.updateEmail(newEmail);
-      }
 
       if (newPass.isNotEmpty) {
         await user.updatePassword(newPass);
@@ -111,19 +106,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               ],
               TextFormField(
                 controller: _emailCtrl,
+                readOnly: true,
+                enabled: false,
                 decoration: const InputDecoration(
                   labelText: 'Correo electrónico',
                 ),
-                keyboardType: TextInputType.emailAddress,
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Ingresá un correo';
-                  }
-                  if (!value.contains('@')) {
-                    return 'Correo no válido';
-                  }
-                  return null;
-                },
               ),
               const SizedBox(height: 16),
               TextFormField(

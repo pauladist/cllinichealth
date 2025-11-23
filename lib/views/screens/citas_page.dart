@@ -69,6 +69,7 @@ class _CitasPageState extends State<CitasPage> {
     Navigator.pushNamed(context, '/appt/select-patient');
   }
 
+
   Future<void> _confirmCancel(Appointment a) async {
     final cs = Theme.of(context).colorScheme;
     final ok = await showDialog<bool>(
@@ -153,6 +154,7 @@ class _CitasPageState extends State<CitasPage> {
           IconButton(
             onPressed: _newAppointment,
             icon: const Icon(Icons.add),
+            tooltip: 'Nueva cita',
           ),
         ],
       ),
@@ -235,13 +237,11 @@ class _CitasPageState extends State<CitasPage> {
                       Wrap(
                         spacing: 8,
                         runSpacing: 8,
-                        crossAxisAlignment:
-                        WrapCrossAlignment.center,
+                        crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
                           Chip(
                             label: Text(status.label),
-                            backgroundColor:
-                            status.color.withOpacity(.15),
+                            backgroundColor: status.color.withOpacity(.15),
                             labelStyle: TextStyle(
                               color: status.color,
                             ),
@@ -250,40 +250,15 @@ class _CitasPageState extends State<CitasPage> {
                               horizontal: 8,
                             ),
                           ),
-                          TextButton.icon(
-                            style: compact,
-                            onPressed:
-                            (a.status == ApptStatus.cancelled)
-                                ? null
-                                : () async {
-                              final updated =
-                              Appointment(
-                                id: a.id,
-                                patientId: a.patientId,
-                                dateTime: a.dateTime,
-                                motivo: a.motivo,
-                                status:
-                                ApptStatus.checkin,
-                              );
-                              await _apptsCtrl
-                                  .update(updated);
-                            },
-                            icon: const Icon(
-                              Icons.how_to_reg,
-                              size: 18,
-                            ),
-                            label: const Text('Check-in'),
-                          ),
                           OutlinedButton.icon(
                             style: compact,
-                            onPressed:
-                            (a.status == ApptStatus.checkin)
+                            onPressed: (a.status == ApptStatus.checkin)
                                 ? () => Navigator.pushNamed(
                               context,
                               '/consulta/new',
                               arguments: {
-                                'appointmentId': a.id,      // id de la cita
-                                'patientId': a.patientId,   //  DNI / id del paciente
+                                'appointmentId': a.id,   // id de la cita
+                                'patientId': a.patientId, // id/dni del paciente
                               },
                             )
                                 : null,
@@ -295,8 +270,7 @@ class _CitasPageState extends State<CitasPage> {
                           ),
                           TextButton.icon(
                             style: compact,
-                            onPressed:
-                            (a.status == ApptStatus.checkin)
+                            onPressed: (a.status == ApptStatus.checkin)
                                 ? null
                                 : () => _confirmCancel(a),
                             icon: const Icon(

@@ -168,14 +168,6 @@ class _QrCheckinPageState extends State<QrCheckinPage> {
               child: CircularProgressIndicator(),
             ),
           ],
-          const SizedBox(height: 8),
-          Padding(
-            padding: const EdgeInsets.only(bottom: 16),
-            child: TextButton(
-              onPressed: _simulateFirstAppointment,
-              child: const Text('Simular QR de primera cita'),
-            ),
-          ),
         ],
       ),
     );

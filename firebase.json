@@ -1,0 +1,38 @@
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "clinichealth-9864a",
+          "appId": "1:106133439146:android:b7d92b919299c8baf5c6d3",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "clinichealth-9864a",
+          "configurations": {
+            "android": "1:106133439146:android:b7d92b919299c8baf5c6d3",
+            "ios": "1:106133439146:ios:537a049f2486e042f5c6d3",
+            "macos": "1:106133439146:ios:537a049f2486e042f5c6d3",
+            "web": "1:106133439146:web:60c0a0436ceb85d9f5c6d3",
+            "windows": "1:106133439146:web:448d7b05f7de7f47f5c6d3"
+          }
+        }
+      }
+    }
+  },
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "default",
+      "ignore": [
+        "node_modules",
+        ".git",
+        "firebase-debug.log",
+        "firebase-debug.*.log",
+        "*.local"
+      ]
+    }
+  ]
+}

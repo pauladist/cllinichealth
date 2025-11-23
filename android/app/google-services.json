@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "106133439146",
+    "project_id": "clinichealth-9864a",
+    "storage_bucket": "clinichealth-9864a.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:106133439146:android:b7d92b919299c8baf5c6d3",
+        "android_client_info": {
+          "package_name": "com.example.clinichealth"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCWMcOqx_4EdvpuBJfHP5I6N40GmxGuZzw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
