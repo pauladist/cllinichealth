@@ -7,13 +7,21 @@ import '../../widgets/clinic_shell.dart';
 import '../../../models/enums.dart'; // ajustá si BottomTab está en otro lado
 
 class NewPatientPage extends StatefulWidget {
-  const NewPatientPage({super.key});
+  /// Si viene un paciente, estamos en modo edición. Si es null, creación.
+  final Patient? patient;
+
+  const NewPatientPage({
+    super.key,
+    this.patient,
+  });
 
   @override
   State<NewPatientPage> createState() => _NewPatientPageState();
 }
 
 class _NewPatientPageState extends State<NewPatientPage> {
+  bool get isEdit => widget.patient != null;
+
   final _formKey = GlobalKey<FormState>();
 
   final _dniCtrl = TextEditingController();
@@ -29,6 +37,32 @@ class _NewPatientPageState extends State<NewPatientPage> {
 
   DateTime? _selectedBirthDate;
   String? _selectedGender; // "Femenino", "Masculino", "Otro"
+
+  // 🔹 NUEVO: pre-cargar datos cuando estamos editando
+  @override
+  void initState() {
+    super.initState();
+
+    if (isEdit && widget.patient != null) {
+      final p = widget.patient!;
+
+      _dniCtrl.text = p.id;
+      _nombreCtrl.text = p.nombre;
+      _apellidoCtrl.text = p.apellido;
+      _telefonoCtrl.text = p.telefono ?? '';
+      _emailCtrl.text = p.email ?? '';
+      _domicilioCtrl.text = p.domicilio;
+
+      _selectedBirthDate = p.fechaNacimiento;
+      if (p.fechaNacimiento != null) {
+        final d = p.fechaNacimiento!;
+        _birthdateCtrl.text =
+        '${d.day.toString().padLeft(2, "0")}/${d.month.toString().padLeft(2, "0")}/${d.year}';
+      }
+
+      _selectedGender = p.genero;
+    }
+  }
 
   @override
   void dispose() {
@@ -91,23 +125,37 @@ class _NewPatientPageState extends State<NewPatientPage> {
       final email = _emailCtrl.text.trim();
       final domicilio = _domicilioCtrl.text.trim();
 
+      // 🔹 si editamos, mantenemos el id original del paciente
+      final id = isEdit ? widget.patient!.id : dni;
+
       final patient = Patient(
-        id: dni,
+        id: id,
         nombre: nombre,
         apellido: apellido,
-        telefono: telefono,                 // ya es String (aunque esté vacío)
-        domicilio: domicilio,               // obligatorio en el form
+        telefono: telefono,                   // ya es String (aunque esté vacío)
+        domicilio: domicilio,                 // obligatorio en el form
         fechaNacimiento: _selectedBirthDate!, // ya validado antes
-        genero: _selectedGender!,           // ya validado antes
-        email: email,                       // puede venir vacío pero no null
+        genero: _selectedGender!,             // ya validado antes
+        email: email,                         // puede venir vacío pero no null
       );
 
-      await _patientsCtrl.create(patient);
+      if (isEdit) {
+        //Asegurate que exista este método en tu PatientsController
+        await _patientsCtrl.update(patient);
+      } else {
+        await _patientsCtrl.create(patient);
+      }
 
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Paciente creado correctamente')),
+        SnackBar(
+          content: Text(
+            isEdit
+                ? 'Paciente actualizado correctamente'
+                : 'Paciente creado correctamente',
+          ),
+        ),
       );
 
       Navigator.pop(context, patient.id);
@@ -118,7 +166,6 @@ class _NewPatientPageState extends State<NewPatientPage> {
         SnackBar(content: Text('Error al guardar paciente: $e')),
       );
     }
-
   }
 
   @override
@@ -128,7 +175,8 @@ class _NewPatientPageState extends State<NewPatientPage> {
     return ClinicShell(
       current: BottomTab.module,
       appBar: AppBar(
-        title: const Text('Nuevo paciente'),
+        // 🔹 Cambia el título según si creás o editás
+        title: Text(isEdit ? 'Editar paciente' : 'Nuevo paciente'),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -139,7 +187,9 @@ class _NewPatientPageState extends State<NewPatientPage> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Text(
-                  'Completá los datos del paciente para crear la ficha y luego asignarle una cita.',
+                  isEdit
+                      ? 'Editá los datos del paciente y guardá los cambios.'
+                      : 'Completá los datos del paciente para crear la ficha y luego asignarle una cita.',
                   style: TextStyle(color: cs.onSurfaceVariant),
                 ),
                 const SizedBox(height: 16),
@@ -266,14 +316,20 @@ class _NewPatientPageState extends State<NewPatientPage> {
                 ),
                 const SizedBox(height: 12),
 
-                // Email (opcional)
+                // Email
                 TextFormField(
                   controller: _emailCtrl,
                   decoration: const InputDecoration(
-                    labelText: 'Correo electrónico (opcional)',
+                    labelText: 'Correo electrónico',
                     prefixIcon: Icon(Icons.email_outlined),
                   ),
                   keyboardType: TextInputType.emailAddress,
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'El correo es obligatorio';
+                    }
+                    return null;
+                  },
                 ),
                 const SizedBox(height: 24),
 
@@ -286,7 +342,12 @@ class _NewPatientPageState extends State<NewPatientPage> {
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
                       : const Icon(Icons.check),
-                  label: Text(_saving ? 'Guardando…' : 'Guardar paciente'),
+                  // 🔹 Texto según estado y modo
+                  label: Text(
+                    _saving
+                        ? 'Guardando…'
+                        : (isEdit ? 'Guardar cambios' : 'Guardar paciente'),
+                  ),
                 ),
               ],
             ),

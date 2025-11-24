@@ -16,81 +16,89 @@ admin.initializeApp();
 //
 
 exports.sendAppointmentReminders = onSchedule(
-  "every 1 minutes",
-  { timeZone: "America/Argentina/Buenos_Aires" },
-  async () => {
-    const db = admin.firestore();
-    const now = new Date();
-    const tenMinutesFromNow = new Date(now.getTime() + 10 * 60 * 1000);
+  {
+    schedule: "every 1 minutes",
+    timeZone: "America/Argentina/Buenos_Aires",
+    region: "us-central1",
+  },
+  async (event) => {
+    try {
+      const db = admin.firestore();
+      const now = new Date();
+      const tenMinutesFromNow = new Date(now.getTime() + 10 * 60 * 1000);
 
-    logger.info("Buscando turnos entre:", now, "y", tenMinutesFromNow);
+      logger.info("Buscando turnos entre:", now, "y", tenMinutesFromNow);
 
-    const apptsSnap = await db
-      .collection("appointments")
-      .where("dateTime", ">=", now)
-      .where("dateTime", "<=", tenMinutesFromNow)
-      .get();
+      const apptsSnap = await db
+        .collection("appointments")
+        .where("dateTime", ">=", now)
+        .where("dateTime", "<=", tenMinutesFromNow)
+        .get();
 
-    if (apptsSnap.empty) {
-      logger.info("No hay turnos para recordar ahora.");
+      if (apptsSnap.empty) {
+        logger.info("No hay turnos para recordar ahora.");
+        return;
+      }
+
+      const deviceSnap = await db.collection("devices").doc("doctor").get();
+      if (!deviceSnap.exists) {
+        logger.error("No existe devices/doctor");
+        return;
+      }
+
+      const token = deviceSnap.get("token");
+      if (!token) {
+        logger.error("devices/doctor no tiene token");
+        return;
+      }
+
+      for (const doc of apptsSnap.docs) {
+        const appt = doc.data();
+        const patientId = appt.patientId || "Paciente";
+        const motivo = appt.motivo || "Consulta";
+
+        const d = appt.dateTime.toDate();
+        const hh = d.getHours().toString().padStart(2, "0");
+        const mm = d.getMinutes().toString().padStart(2, "0");
+
+        const message = {
+          token,
+          notification: {
+            title: "Turno en 10 minutos",
+            body: `Tenés un turno (${motivo}) con ${patientId} a las ${hh}:${mm}`,
+          },
+          android: { priority: "high" },
+        };
+
+        try {
+          await admin.messaging().send(message);
+          logger.info("📩 Recordatorio enviado:", doc.id);
+        } catch (err) {
+          logger.error("Error enviando push FCM:", err);
+        }
+
+        await db.collection("notifications").add({
+          doctorId: "doctor",
+          appointmentId: doc.id,
+          title: "Turno en 10 minutos",
+          body: `Tenés un turno (${motivo}) con ${patientId} a las ${hh}:${mm}`,
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          expireAt: admin.firestore.Timestamp.fromDate(
+            new Date(Date.now() + 24 * 60 * 60 * 1000)
+          ),
+          read: false,
+          type: "appointment-reminder",
+        });
+      }
+
       return;
+    } catch (err) {
+      logger.error("Error en sendAppointmentReminders:", err);
     }
-
-    // Obtener token FCM del doctor
-    const deviceSnap = await db.collection("devices").doc("doctor").get();
-    if (!deviceSnap.exists) {
-      logger.error("No existe devices/doctor");
-      return;
-    }
-
-    const token = deviceSnap.get("token");
-    if (!token) {
-      logger.error("devices/doctor no tiene token");
-      return;
-    }
-
-   for (const doc of apptsSnap.docs) {
-     const appt = doc.data();
-     const patientId = appt.patientId || "Paciente";
-     const motivo = appt.motivo || "Consulta";
-
-     const d = appt.dateTime.toDate();
-     const hh = d.getHours().toString().padStart(2, "0");
-     const mm = d.getMinutes().toString().padStart(2, "0");
-
-     const message = {
-       token,
-       notification: {
-         title: "Turno en 10 minutos",
-         body: `Tenés un turno (${motivo}) con ${patientId} a las ${hh}:${mm}`,
-       },
-       android: { priority: "high" },
-     };
-
-     // 1) Enviar la push
-     await admin.messaging().send(message);
-     logger.info("📩 Recordatorio enviado:", doc.id);
-
-     // 2) Guardar en Firestore para la pestaña de Notificaciones
-     await db.collection("notifications").add({
-       doctorId: "doctor", // o appt.doctorId si lo tenés
-       appointmentId: doc.id,
-       title: "Turno en 10 minutos",
-       body: `Tenés un turno (${motivo}) con ${patientId} a las ${hh}:${mm}`,
-       createdAt: admin.firestore.FieldValue.serverTimestamp(),
-       // IMPORTANTÍSIMO: este campo es el que va a usar TTL
-       expireAt: admin.firestore.Timestamp.fromDate(
-         new Date(Date.now() + 24 * 60 * 60 * 1000) // ahora + 24 hs
-       ),
-       read: false,
-       type: "appointment-reminder",
-     });
-   }
-
-
-    return;
   }
 );
+
+
 
 
 //

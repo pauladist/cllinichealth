@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../models/dayslot.dart';
 import '../../widgets/clinic_shell.dart';
 import '../../../models/enums.dart';
@@ -17,6 +18,7 @@ class _SelectSlotPageState extends State<SelectSlotPage> {
   DaySlot? _selectedSlot;
 
   List<DaySlot> slots = [];
+  Set<DateTime> _occupiedSlots = {};
 
   @override
   void didChangeDependencies() {
@@ -26,6 +28,7 @@ class _SelectSlotPageState extends State<SelectSlotPage> {
     date = args['date'];
 
     _generateSlots();
+    _loadOccupiedSlots();
   }
 
   void _generateSlots() {
@@ -41,6 +44,48 @@ class _SelectSlotPageState extends State<SelectSlotPage> {
       slots.add(DaySlot(start: s, end: e, isFree: true));
     }
   }
+  /// Carga desde Firestore los turnos ya reservados para este día
+  Future<void> _loadOccupiedSlots() async {
+    try {
+      final startOfDay = DateTime(date.year, date.month, date.day);
+      final endOfDay = startOfDay.add(const Duration(days: 1));
+
+      final snap = await FirebaseFirestore.instance
+          .collection('appointments')
+          .where(
+        'dateTime',
+        isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay),
+      )
+          .where(
+        'dateTime',
+        isLessThan: Timestamp.fromDate(endOfDay),
+      )
+          .get();
+
+      final occupied = <DateTime>{};
+
+      for (final doc in snap.docs) {
+        final ts = doc.data()['dateTime'];
+        if (ts is Timestamp) {
+          final dt = ts.toDate();
+          occupied.add(DateTime(
+            dt.year,
+            dt.month,
+            dt.day,
+            dt.hour,
+            dt.minute,
+          ));
+        }
+      }
+
+      setState(() {
+        _occupiedSlots = occupied;
+      });
+    } catch (e) {
+      // Si algo falla igual seguimos, solo no se deshabilitan por turnos existentes
+      debugPrint('Error cargando turnos ocupados: $e');
+    }
+  }
 
   bool _isSlotDisabled(DaySlot slot) {
     final now = DateTime.now();
@@ -52,12 +97,18 @@ class _SelectSlotPageState extends State<SelectSlotPage> {
     // Si el día es anterior a hoy, todo deshabilitado
     if (selectedDay.isBefore(today)) return true;
 
-    // Si es un día futuro, nada deshabilitado
-    if (selectedDay.isAfter(today)) return false;
+    // Si es un día futuro, deshabilitamos únicamente los ya ocupados
+    if (selectedDay.isAfter(today)) {
+      return _occupiedSlots.contains(slot.start);
+    }
 
     // Es hoy: deshabilitar los horarios anteriores a la hora actual
-    return slot.start.isBefore(now);
+    // o los que ya tengan un turno reservado
+    if (slot.start.isBefore(now)) return true;
+
+    return _occupiedSlots.contains(slot.start);
   }
+
 
   void _continue() {
     if (_selectedSlot == null) return;

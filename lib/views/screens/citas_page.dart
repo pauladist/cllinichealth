@@ -89,17 +89,20 @@ class _CitasPageState extends State<CitasPage> {
                 color: cs.primaryContainer.withOpacity(.4),
                 shape: BoxShape.circle,
               ),
-              child: Icon(Icons.warning_amber_rounded,
-                  color: cs.primary, size: 34),
+              child: Icon(
+                Icons.warning_amber_rounded,
+                color: cs.primary,
+                size: 34,
+              ),
             ),
             const SizedBox(height: 14),
             const Text(
-              'Cancelar cita',
+              'Eliminar cita',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 8),
             Text(
-              '¿Seguro que querés cancelar esta cita?\n\n'
+              '¿Seguro que querés borrar esta cita?\n\n'
                   '${_ddmmyy(a.dateTime)}  •  ${_hhmm(a.dateTime)}',
               textAlign: TextAlign.center,
               style: TextStyle(color: cs.onSurfaceVariant),
@@ -125,25 +128,42 @@ class _CitasPageState extends State<CitasPage> {
     );
 
     if (ok == true) {
-      final updated = Appointment(
-        id: a.id,
-        patientId: a.patientId,
-        dateTime: a.dateTime,
-        motivo: a.motivo,
-        status: ApptStatus.cancelled,
-      );
-      await _apptsCtrl.update(updated);
+      // ahora en vez de marcar como cancelada, la BORRAMOS
+      await _apptsCtrl.delete(a.id);
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Cita cancelada')),
+        const SnackBar(content: Text('Cita eliminada')),
       );
     }
   }
 
+
   @override
   Widget build(BuildContext context) {
-    final list = _upcoming;
+    // lista original
+    final upcomingList = _upcoming;
+
+// ahora implementamos el borrado automático
+    final now = DateTime.now();
+    final cutoff = now.subtract(const Duration(hours: 24));
+
+    final List<Appointment> list = [];
+
+    for (final a in upcomingList) {
+      final isOldCheckin =
+          a.status == ApptStatus.checkin &&
+              a.dateTime.isBefore(cutoff);
+
+      if (isOldCheckin) {
+        // borrar automáticamente
+        _apptsCtrl.delete(a.id);
+      } else {
+        // mantener en la lista visible
+        list.add(a);
+      }
+    }
+
     final cs = Theme.of(context).colorScheme;
 
     return ClinicShell(
