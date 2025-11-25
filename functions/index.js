@@ -15,13 +15,18 @@ admin.initializeApp();
 // ─────────────────────────────────────────────────────────────
 //
 
-exports.sendAppointmentReminders = onSchedule(
+//
+// ─────────────────────────────────────────────────────────────
+//   1) RECORDATORIO 10 MIN ANTES DEL TURNO (FCM)
+// ─────────────────────────────────────────────────────────────
+//
+exports.sendAppointmentReminder = onSchedule(
   {
     schedule: "every 1 minutes",
     timeZone: "America/Argentina/Buenos_Aires",
     region: "us-central1",
   },
-  async (event) => {
+  async () => {
     try {
       const db = admin.firestore();
       const now = new Date();
@@ -29,14 +34,16 @@ exports.sendAppointmentReminders = onSchedule(
 
       logger.info("Buscando turnos entre:", now, "y", tenMinutesFromNow);
 
+      // 👉 Solo turnos dentro de la ventana y que NO hayan sido notificados
       const apptsSnap = await db
         .collection("appointments")
         .where("dateTime", ">=", now)
         .where("dateTime", "<=", tenMinutesFromNow)
+        .where("reminderSent", "==", false)
         .get();
 
       if (apptsSnap.empty) {
-        logger.info("No hay turnos para recordar ahora.");
+        logger.info("No hay turnos dentro de los próximos 10 minutos.");
         return;
       }
 
@@ -56,17 +63,21 @@ exports.sendAppointmentReminders = onSchedule(
         const appt = doc.data();
         const patientId = appt.patientId || "Paciente";
         const motivo = appt.motivo || "Consulta";
-
         const d = appt.dateTime.toDate();
-        const hh = d.getHours().toString().padStart(2, "0");
-        const mm = d.getMinutes().toString().padStart(2, "0");
+
+        // ⏰ Formatear hora en horario de Argentina
+        const timeStr = d.toLocaleTimeString("es-AR", {
+          timeZone: "America/Argentina/Buenos_Aires",
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+
+        const title = "Turno en 10 minutos";
+        const body = `Tenés un turno (${motivo}) con el paciente ${patientId} a las ${timeStr}`;
 
         const message = {
           token,
-          notification: {
-            title: "Turno en 10 minutos",
-            body: `Tenés un turno (${motivo}) con ${patientId} a las ${hh}:${mm}`,
-          },
+          notification: { title, body },
           android: { priority: "high" },
         };
 
@@ -74,14 +85,15 @@ exports.sendAppointmentReminders = onSchedule(
           await admin.messaging().send(message);
           logger.info("📩 Recordatorio enviado:", doc.id);
         } catch (err) {
-          logger.error("Error enviando push FCM:", err);
+          logger.error("❌ Error enviando push:", err);
         }
 
+        // Guardar registro de notificación (MISMA colección que email, NO rompe nada)
         await db.collection("notifications").add({
           doctorId: "doctor",
           appointmentId: doc.id,
-          title: "Turno en 10 minutos",
-          body: `Tenés un turno (${motivo}) con ${patientId} a las ${hh}:${mm}`,
+          title,
+          body,
           createdAt: admin.firestore.FieldValue.serverTimestamp(),
           expireAt: admin.firestore.Timestamp.fromDate(
             new Date(Date.now() + 24 * 60 * 60 * 1000)
@@ -89,14 +101,21 @@ exports.sendAppointmentReminders = onSchedule(
           read: false,
           type: "appointment-reminder",
         });
+
+        //  Marcar que ya fue notificado (para no repetir por minuto)
+        await doc.ref.update({
+          reminderSent: true,
+        });
       }
 
       return;
     } catch (err) {
-      logger.error("Error en sendAppointmentReminders:", err);
+      logger.error(" Error general en sendAppointmentReminder:", err);
     }
   }
 );
+
+
 
 
 
@@ -150,13 +169,19 @@ exports.sendAppointmentEmailOnCreate = onDocumentCreated(
       return;
     }
 
-    // 2) Formatear fecha/hora del turno
-    const d = appt.dateTime.toDate();
-    const dateStr = d.toLocaleDateString("es-AR");
-    const timeStr = d.toLocaleTimeString("es-AR", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+        // 2) Formatear fecha/hora del turno en horario de Argentina
+        const d = appt.dateTime.toDate();
+
+        const dateStr = d.toLocaleDateString("es-AR", {
+          timeZone: "America/Argentina/Buenos_Aires",
+        });
+
+        const timeStr = d.toLocaleTimeString("es-AR", {
+          timeZone: "America/Argentina/Buenos_Aires",
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+
 
     const motivo = appt.motivo || "Consulta médica";
 

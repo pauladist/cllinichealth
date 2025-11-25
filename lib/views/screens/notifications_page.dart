@@ -13,7 +13,7 @@ class NotificationsPage extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
 
     final user = FirebaseAuth.instance.currentUser;
-    final doctorId = user?.uid ?? 'doctor'; // mismo que usás en la Function
+    final doctorId = 'doctor'; // mismo que usás en la Function
 
     final query = FirebaseFirestore.instance
         .collection('notifications')

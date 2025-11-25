@@ -5,13 +5,20 @@ class AppointmentsController {
   final _col = FirebaseFirestore.instance.collection('appointments');
 
   /// Crear nueva cita
+  /// Crear nueva cita
   Future<String> create(Appointment a) async {
     final data = a.toMap();
-    // Asegurarnos que dateTime es DateTime (Firestore lo guarda como Timestamp)
-    // y que tiene patientId, motivo, status
+
+    // 👇 Nos aseguramos de que el turno arranque como "no notificado"
+    if (!data.containsKey('reminderSent')) {
+      data['reminderSent'] = false;
+    }
+
+    // Firestore lo guarda como Timestamp
     final doc = await _col.add(data);
     return doc.id;
   }
+
 
   /// Actualizar cita existente
   Future<void> update(Appointment a) async {

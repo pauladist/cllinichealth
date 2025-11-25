@@ -8,9 +8,6 @@ class ProfilePage extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
 
-    // Cuando uses FirebaseAuth, podés traer el usuario:
-    // final user = FirebaseAuth.instance.currentUser;
-
     return ClinicShell(
       current: BottomTab.settings,
       appBar: AppBar(
@@ -70,7 +67,7 @@ class ProfilePage extends StatelessWidget {
             ListTile(
               leading: Icon(Icons.email, color: cs.primary),
               title: const Text("Correo"),
-              subtitle: const Text("doctor@clinichealth.com"),
+              subtitle: const Text("supervisorgeobuild@gmail.com"),
             ),
           ],
         ),

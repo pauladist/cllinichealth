@@ -29,10 +29,10 @@ class SettingsPage extends StatelessWidget {
             child: ListTile(
               leading: CircleAvatar(
                 backgroundColor: cs.primaryContainer,
-                child: Icon(Icons.person, color: cs.onPrimaryContainer),
+                child: Icon(Icons.lock, color: cs.onPrimaryContainer),
               ),
-              title: const Text('Mi perfil'),
-              subtitle: const Text('Datos del profesional'),
+              title: const Text('Ajustes de cuenta'),
+              subtitle: const Text('Editar contraseña'),
               trailing: const Icon(Icons.chevron_right),
               onTap: () {
                 Navigator.of(context).push(
